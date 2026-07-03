@@ -247,10 +247,22 @@
         <input id="taskInput" class="field" type="text" placeholder="예: 헬스장 가기" maxlength="30" />
         <button id="addBtn">추가</button>
       </div>
+      <div class="type-seg" id="doModeSeg">
+        <button data-mode="week" class="active">주 반복</button>
+        <button data-mode="date">날짜 지정</button>
+      </div>
       <div class="opts" id="doOpts">
         주 <input type="number" class="field" id="doGoal" value="5" min="1" step="1" inputmode="numeric" />회 ·
         회당 +<input type="number" class="field" id="doReward" value="500" min="0" step="100" inputmode="numeric" />원 ·
         미달 −<input type="number" class="field" id="doPenalty" value="10000" min="0" step="1000" inputmode="numeric" />원
+      </div>
+      <div class="deadline-row" id="doDateRow" style="display:none">
+        <label>언제까지</label>
+        <input type="date" class="field" id="doDueInput" />
+      </div>
+      <div class="opts" id="doDateOpts" style="display:none">
+        완료 +<input type="number" class="field" id="doDateReward" value="500" min="0" step="100" inputmode="numeric" />원 ·
+        미완료 −<input type="number" class="field" id="doDatePenalty" value="10000" min="0" step="1000" inputmode="numeric" />원
       </div>
       <div class="deadline-row" id="deadlineRow" style="display:none">
         <label>언제까지</label>
@@ -332,12 +344,20 @@
 
   var state = { tasks: [] };
   var currentType = "do";
+  var currentDoMode = "week";
   var openEditor = null;
   var _now = new Date();
   var calCursor = { y: _now.getFullYear(), m: _now.getMonth() };
   var selectedDate = ymd(stripTime(_now));
 
   // ---------- 상태 계산 ----------
+  function isDateDo(t) { return (t.type || "do") === "do" && t.mode === "date"; }
+  function sameWeek(d, ref) { return mondayOf(d).getTime() === mondayOf(ref).getTime(); }
+  function dueDoStatus(task) {
+    var today = stripTime(new Date()), due = parseYmd(task.due);
+    var daysLeft = Math.round((due - today) / 86400000);
+    return { due: task.due, daysLeft: daysLeft, done: !!task.done, overdue: !task.done && daysLeft < 0, dueThisWeek: sameWeek(due, today) };
+  }
   function doStatus(task) {
     var goal = doNums(task).goal;
     var today = stripTime(new Date()), days = weekDates(today);
@@ -366,11 +386,16 @@
   function weeklyTotals() { return weeklyTotalsFor(state.tasks); }
   function weeklyTotalsFor(tasks) {
     var earn = 0, fine = 0, totalDone = 0;
+    var today = stripTime(new Date());
     (tasks || []).forEach(function (t) {
       if ((t.type || "do") === "avoid") {
         var s = avoidStatus(t), a = avNums(t);
         fine += Math.max(0, s.slipsThisWeek - a.limit) * a.penalty;
         if (a.reward > 0 && s.slipsThisWeek <= a.limit) earn += a.reward;
+      } else if (isDateDo(t)) {
+        var ds = dueDoStatus(t), dn = doNums(t);
+        if (ds.done && t.doneDate && sameWeek(parseYmd(t.doneDate), today)) totalDone += 1;
+        if (ds.dueThisWeek) { if (ds.done) earn += dn.reward; else fine += dn.penalty; }
       } else {
         var st = doStatus(t), d = doNums(t);
         totalDone += st.done; earn += st.done * d.reward;
@@ -383,6 +408,7 @@
     var done = 0, slip = 0;
     state.tasks.forEach(function (t) {
       if ((t.type || "do") === "avoid") { if (t.slips && t.slips[key]) slip += t.slips[key]; }
+      else if (isDateDo(t)) { if (t.done && t.doneDate === key) done++; }
       else { if (t.log && t.log[key]) done++; }
     });
     return { done: done, slip: slip };
@@ -499,8 +525,11 @@
     var items = [];
     state.tasks.forEach(function (t) {
       if ((t.type || "do") === "avoid" && t.deadline) {
-        var daysLeft = Math.round((parseYmd(t.deadline) - today) / 86400000);
-        if (daysLeft >= 0) items.push({ task: t, daysLeft: daysLeft });
+        var dl = Math.round((parseYmd(t.deadline) - today) / 86400000);
+        if (dl >= 0) items.push({ task: t, daysLeft: dl, date: t.deadline, kind: "avoid" });
+      } else if (isDateDo(t) && t.due && !t.done) {
+        var dl2 = Math.round((parseYmd(t.due) - today) / 86400000);
+        if (dl2 >= 0) items.push({ task: t, daysLeft: dl2, date: t.due, kind: "do" });
       }
     });
     if (!items.length) return;
@@ -510,19 +539,20 @@
     var ov = document.createElement("div"); ov.className = "overline"; ov.textContent = "다가오는 마감"; card.appendChild(ov);
 
     items.slice(0, 5).forEach(function (it) {
-      var t = it.task, st = avoidStatus(t), dl = parseYmd(t.deadline);
+      var t = it.task, dl = parseYmd(it.date);
       var row = document.createElement("div"); row.className = "dl-item";
       var dd = document.createElement("div"); dd.className = "dl-dday" + (it.daysLeft <= 3 ? " soon" : "");
       dd.textContent = it.daysLeft === 0 ? "D-DAY" : "D-" + it.daysLeft;
       var body = document.createElement("div"); body.className = "dl-body";
       var nm = document.createElement("div"); nm.className = "dl-name"; nm.textContent = t.name;
       var sub = document.createElement("div"); sub.className = "dl-sub";
-      sub.textContent = st.total === 0 ? "아직 한 번도 안 어김" : "지금까지 " + st.total + "회 어김";
+      if (it.kind === "do") { sub.textContent = "완료하면 +" + won(doNums(t).reward); }
+      else { var st = avoidStatus(t); sub.textContent = st.total === 0 ? "아직 한 번도 안 어김" : "지금까지 " + st.total + "회 어김"; }
       body.appendChild(nm); body.appendChild(sub);
       var date = document.createElement("div"); date.className = "dl-date";
       date.textContent = (dl.getMonth() + 1) + "/" + dl.getDate();
       row.appendChild(dd); row.appendChild(body); row.appendChild(date);
-      row.onclick = (function (key, mm, yy) { return function () { selectedDate = key; calCursor = { y: yy, m: mm }; render(); }; })(t.deadline, dl.getMonth(), dl.getFullYear());
+      row.onclick = (function (key, mm, yy) { return function () { selectedDate = key; calCursor = { y: yy, m: mm }; render(); }; })(it.date, dl.getMonth(), dl.getFullYear());
       card.appendChild(row);
     });
     host.appendChild(card);
@@ -554,6 +584,7 @@
     var deadlines = {};
     state.tasks.forEach(function (t) {
       if ((t.type || "do") === "avoid" && t.deadline) { (deadlines[t.deadline] = deadlines[t.deadline] || []).push(t.name); }
+      else if (isDateDo(t) && t.due) { (deadlines[t.due] = deadlines[t.due] || []).push(t.name); }
     });
     var first = new Date(calCursor.y, calCursor.m, 1);
     var startBlank = (first.getDay() + 6) % 7;
@@ -658,6 +689,7 @@
   }
 
   function renderDoCard(task) {
+    if (isDateDo(task)) return renderDoDateCard(task);
     var st = doStatus(task), nums = doNums(task);
     var card = document.createElement("div"); card.className = "task";
     var badge;
@@ -680,6 +712,40 @@
     card.appendChild(toggle);
 
     card.appendChild(ruleLine("이번 주 " + st.done + "/" + st.goal + " · 회당 +" + won(nums.reward) + " · 미달 −" + won(nums.penalty)));
+    if (openEditor === task.id) card.appendChild(renderEditor(task));
+    return card;
+  }
+
+  function renderDoDateCard(task) {
+    var ds = dueDoStatus(task), nums = doNums(task);
+    var card = document.createElement("div"); card.className = "task";
+    var badge;
+    if (ds.done) badge = badgeEl("good", "완료");
+    else if (ds.overdue) badge = badgeEl("bad", "기한 지남");
+    else if (ds.daysLeft === 0) badge = badgeEl("ink", "D-DAY");
+    else badge = badgeEl("ink", "D-" + ds.daysLeft);
+    card.appendChild(taskHeader(task, badge));
+
+    var line = document.createElement("div"); line.className = "status-line";
+    if (ds.done) { line.textContent = "완료했어요"; line.style.color = "var(--good)"; }
+    else if (ds.overdue) { line.textContent = "기한이 지났어요"; line.style.color = "var(--bad)"; }
+    else { line.textContent = ds.daysLeft === 0 ? "오늘까지예요" : ds.daysLeft + "일 남았어요"; line.style.color = "var(--text)"; }
+    card.appendChild(line);
+
+    var sub = document.createElement("div"); sub.className = "status-sub"; sub.textContent = "목표 " + task.due + "까지";
+    card.appendChild(sub);
+
+    var toggle = document.createElement("button");
+    toggle.className = "day-toggle" + (ds.done ? " on" : "");
+    toggle.textContent = ds.done ? "완료됨" : "완료로 표시";
+    toggle.onclick = function () {
+      if (task.done) { task.done = false; task.doneDate = null; }
+      else { task.done = true; task.doneDate = ymd(stripTime(new Date())); }
+      save(); render();
+    };
+    card.appendChild(toggle);
+
+    card.appendChild(ruleLine("완료 +" + won(nums.reward) + " · 미완료 −" + won(nums.penalty)));
     if (openEditor === task.id) card.appendChild(renderEditor(task));
     return card;
   }
@@ -748,7 +814,14 @@
   function renderEditor(task) {
     var box = document.createElement("div"); box.className = "editor";
     var type = task.type || "do"; var inputs = {};
-    if (type === "do") {
+    if (isDateDo(task)) {
+      var dd = doNums(task);
+      inputs.due = document.createElement("input"); inputs.due.type = "date"; inputs.due.className = "field"; inputs.due.value = task.due || "";
+      inputs.reward = numField(dd.reward, 0, 100); inputs.penalty = numField(dd.penalty, 0, 1000);
+      box.appendChild(editRow("목표 날짜", inputs.due, ""));
+      box.appendChild(editRow("완료 보상", inputs.reward, "원"));
+      box.appendChild(editRow("미완료 벌금", inputs.penalty, "원"));
+    } else if (type === "do") {
       var d = doNums(task);
       inputs.goal = numField(d.goal, 1, 1); inputs.reward = numField(d.reward, 0, 100); inputs.penalty = numField(d.penalty, 0, 1000);
       box.appendChild(editRow("주 목표 횟수", inputs.goal, "회"));
@@ -766,7 +839,11 @@
     var btns = document.createElement("div"); btns.className = "btns";
     var saveBtn = document.createElement("button"); saveBtn.className = "save"; saveBtn.textContent = "저장";
     saveBtn.onclick = function () {
-      if (type === "do") {
+      if (isDateDo(task)) {
+        if (inputs.due.value) task.due = inputs.due.value;
+        task.reward = Math.max(0, n(inputs.reward.value, DEF.doReward));
+        task.penalty = Math.max(0, n(inputs.penalty.value, DEF.doPenalty));
+      } else if (type === "do") {
         task.goal = Math.max(1, Math.round(n(inputs.goal.value, DEF.doGoal)));
         task.reward = Math.max(0, n(inputs.reward.value, DEF.doReward));
         task.penalty = Math.max(0, n(inputs.penalty.value, DEF.doPenalty));
@@ -794,7 +871,7 @@
         avCount++;
         if (t.slips) { for (var k in t.slips) totalSlips += t.slips[k]; }
         var s = avoidStatus(t).streak; if (s > bestStreak) bestStreak = s;
-      } else { doCount++; if (t.log) totalCompletions += Object.keys(t.log).length; }
+      } else { doCount++; if (t.log) totalCompletions += Object.keys(t.log).length; if (isDateDo(t) && t.done) totalCompletions += 1; }
     });
 
     var head = document.createElement("div"); head.className = "profile-head";
@@ -853,20 +930,38 @@
 
   // ---------- 추가 UI ----------
   var typeSeg = document.getElementById("typeSeg");
+  var doModeSeg = document.getElementById("doModeSeg");
   var input = document.getElementById("taskInput");
   var deadlineRow = document.getElementById("deadlineRow");
   var doOpts = document.getElementById("doOpts");
+  var doDateRow = document.getElementById("doDateRow");
+  var doDateOpts = document.getElementById("doDateOpts");
   var avOpts = document.getElementById("avOpts");
+  function updateAddVisibility() {
+    var avoid = currentType === "avoid";
+    var dateMode = !avoid && currentDoMode === "date";
+    doModeSeg.style.display = avoid ? "none" : "flex";
+    doOpts.style.display = (!avoid && currentDoMode === "week") ? "block" : "none";
+    doDateRow.style.display = dateMode ? "flex" : "none";
+    doDateOpts.style.display = dateMode ? "block" : "none";
+    deadlineRow.style.display = avoid ? "flex" : "none";
+    avOpts.style.display = avoid ? "block" : "none";
+    input.placeholder = avoid ? "예: 야식 먹기" : (dateMode ? "예: 건강검진 받기" : "예: 헬스장 가기");
+  }
   typeSeg.querySelectorAll("button").forEach(function (b) {
     b.onclick = function () {
       currentType = b.getAttribute("data-type");
       typeSeg.querySelectorAll("button").forEach(function (x) { x.classList.remove("active"); });
       b.classList.add("active");
-      var avoid = currentType === "avoid";
-      deadlineRow.style.display = avoid ? "flex" : "none";
-      avOpts.style.display = avoid ? "block" : "none";
-      doOpts.style.display = avoid ? "none" : "block";
-      input.placeholder = avoid ? "예: 야식 먹기" : "예: 헬스장 가기";
+      updateAddVisibility();
+    };
+  });
+  doModeSeg.querySelectorAll("button").forEach(function (b) {
+    b.onclick = function () {
+      currentDoMode = b.getAttribute("data-mode");
+      doModeSeg.querySelectorAll("button").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      updateAddVisibility();
     };
   });
   function addTask() {
@@ -880,6 +975,12 @@
       task.limit = Math.max(0, Math.round(n(document.getElementById("avLimit").value, DEF.avLimit)));
       task.penalty = Math.max(0, n(document.getElementById("avPenalty").value, DEF.avPenalty));
       task.reward = Math.max(0, n(document.getElementById("avReward").value, DEF.avReward));
+    } else if (currentDoMode === "date") {
+      var due = document.getElementById("doDueInput").value;
+      if (!due) { alert("목표 날짜를 선택하세요."); return; }
+      task.mode = "date"; task.due = due; task.done = false;
+      task.reward = Math.max(0, n(document.getElementById("doDateReward").value, DEF.doReward));
+      task.penalty = Math.max(0, n(document.getElementById("doDatePenalty").value, DEF.doPenalty));
     } else {
       task.log = {};
       task.goal = Math.max(1, Math.round(n(document.getElementById("doGoal").value, DEF.doGoal)));
@@ -887,7 +988,7 @@
       task.penalty = Math.max(0, n(document.getElementById("doPenalty").value, DEF.doPenalty));
     }
     state.tasks.push(task);
-    input.value = ""; document.getElementById("deadlineInput").value = "";
+    input.value = ""; document.getElementById("deadlineInput").value = ""; document.getElementById("doDueInput").value = "";
     save(); showTab("home");
   }
   document.getElementById("addBtn").onclick = addTask;
