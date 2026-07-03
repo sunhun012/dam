@@ -38,7 +38,9 @@
   .settle-amt { font-size: 42px; font-weight: 500; letter-spacing: -0.035em; margin: 10px 0 2px; line-height: 1; }
   .settle-amt.pos { color: var(--good); }
   .settle-amt.neg { color: var(--bad); }
-  .settle-cap { font-size: 12px; color: var(--muted); }
+  .settle-cap { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+  .settle-toggle { border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: inherit; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: pointer; letter-spacing: -0.01em; }
+  .settle-toggle:active { background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .stat-row { display: flex; margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
   .stat { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 0 14px; }
   .stat:first-child { padding-left: 0; }
@@ -227,10 +229,13 @@
     <div class="summary">
       <div class="overline" id="ovLabel">이번 주</div>
       <div class="settle-amt pos" id="homeSettle">0원</div>
-      <div class="settle-cap">예상 정산</div>
+      <div class="settle-cap">
+        <span id="settleCap">현재 정산</span>
+        <button id="settleToggle" class="settle-toggle">예상 보기</button>
+      </div>
       <div class="stat-row">
         <div class="stat"><span class="s-l">번 돈</span><span class="s-v good" id="homeEarn">+0원</span></div>
-        <div class="stat"><span class="s-l">예상 벌금</span><span class="s-v bad" id="homeFine">−0원</span></div>
+        <div class="stat"><span class="s-l" id="fineLabel">벌금</span><span class="s-v bad" id="homeFine">−0원</span></div>
         <div class="stat"><span class="s-l">완료</span><span class="s-v" id="homeCount">0회</span></div>
       </div>
     </div>
@@ -362,6 +367,7 @@
   var state = { tasks: [] };
   var currentType = "do";
   var currentDoMode = "week";
+  var settleMode = "current";
   var openEditor = null;
   var _now = new Date();
   var calCursor = { y: _now.getFullYear(), m: _now.getMonth() };
@@ -400,23 +406,27 @@
     if (task.deadline) { daysLeft = Math.round((parseYmd(task.deadline) - today) / 86400000); finished = daysLeft < 0; }
     return { slipsThisWeek: slipsThisWeek, total: total, streak: streak, daysLeft: daysLeft, finished: finished, todayCount: (task.slips && task.slips[ymd(today)]) || 0 };
   }
-  function weeklyTotals() { return weeklyTotalsFor(state.tasks); }
-  function weeklyTotalsFor(tasks) {
+  // mode: "current" = 지금까지 실제 발생한 것만, "projected" = 이번 주 끝났다고 가정한 예상
+  function weeklyTotals(mode) {
+    mode = mode || "current";
+    var projected = mode === "projected";
     var earn = 0, fine = 0, totalDone = 0;
     var today = stripTime(new Date());
-    (tasks || []).forEach(function (t) {
+    state.tasks.forEach(function (t) {
       if ((t.type || "do") === "avoid") {
         var s = avoidStatus(t), a = avNums(t);
-        fine += Math.max(0, s.slipsThisWeek - a.limit) * a.penalty;
-        if (a.reward > 0 && s.slipsThisWeek <= a.limit) earn += a.reward;
+        fine += Math.max(0, s.slipsThisWeek - a.limit) * a.penalty; // 이미 초과분 = 실제 발생
+        if (projected && a.reward > 0 && s.slipsThisWeek <= a.limit) earn += a.reward; // 보상은 주 끝까지 지켜야 = 예상만
       } else if (isDateDo(t)) {
         var ds = dueDoStatus(t), dn = doNums(t);
         if (ds.done && t.doneDate && sameWeek(parseYmd(t.doneDate), today)) totalDone += 1;
-        if (ds.dueThisWeek) { if (ds.done) earn += dn.reward; else fine += dn.penalty; }
+        if (ds.done) { if (ds.dueThisWeek) earn += dn.reward; }
+        else if (projected) { if (ds.dueThisWeek) fine += dn.penalty; } // 예상: 이번 주 마감이면 미완료 벌금
+        else { if (ds.overdue && ds.dueThisWeek) fine += dn.penalty; } // 현재: 이미 기한 지난 것만
       } else {
         var st = doStatus(t), d = doNums(t);
-        totalDone += st.done; earn += st.done * d.reward;
-        if (!st.reached) fine += d.penalty;
+        totalDone += st.done; earn += st.done * d.reward; // 완료한 만큼 보상 = 실제 발생
+        if (projected && !st.reached) fine += d.penalty; // 미달 벌금 = 예상만
       }
     });
     return { earn: earn, fine: fine, settle: earn - fine, totalDone: totalDone };
@@ -523,13 +533,17 @@
     var days = weekDates(new Date()), mon = days[0], sun = days[6];
     document.getElementById("ovLabel").textContent =
       "이번 주 · " + (mon.getMonth() + 1) + "/" + mon.getDate() + " – " + (sun.getMonth() + 1) + "/" + sun.getDate();
-    var wt = weeklyTotals();
+    var wt = weeklyTotals(settleMode);
     document.getElementById("homeEarn").textContent = "+" + won(wt.earn);
     document.getElementById("homeFine").textContent = "−" + won(wt.fine);
     document.getElementById("homeCount").textContent = wt.totalDone + "회";
     var a = document.getElementById("homeSettle");
     a.textContent = (wt.settle < 0 ? "−" : "+") + won(wt.settle);
     a.className = "settle-amt " + (wt.settle < 0 ? "neg" : "pos");
+    var proj = settleMode === "projected";
+    document.getElementById("settleCap").textContent = proj ? "예상 정산" : "현재 정산";
+    document.getElementById("fineLabel").textContent = proj ? "예상 벌금" : "벌금";
+    document.getElementById("settleToggle").textContent = proj ? "현재 보기" : "예상 보기";
 
     renderDeadlineAlert();
     renderCalendar();
@@ -954,14 +968,14 @@
     info.appendChild(nameEl); info.appendChild(subEl);
     head.appendChild(av); head.appendChild(info); body.appendChild(head);
 
-    var wt = weeklyTotals(); var neg = wt.settle < 0;
+    var wt = weeklyTotals("current"); var neg = wt.settle < 0;
     var sum = document.createElement("div"); sum.className = "summary";
     sum.innerHTML =
-      '<div class="overline">이번 주 예상 정산</div>' +
+      '<div class="overline">이번 주 현재 정산</div>' +
       '<div class="settle-amt ' + (neg ? "neg" : "pos") + '">' + (neg ? "−" : "+") + won(wt.settle) + '</div>' +
       '<div class="stat-row" style="margin-top:16px">' +
         '<div class="stat"><span class="s-l">번 돈</span><span class="s-v good">+' + won(wt.earn) + '</span></div>' +
-        '<div class="stat"><span class="s-l">예상 벌금</span><span class="s-v bad">−' + won(wt.fine) + '</span></div>' +
+        '<div class="stat"><span class="s-l">벌금</span><span class="s-v bad">−' + won(wt.fine) + '</span></div>' +
       '</div>';
     body.appendChild(sum);
 
@@ -1073,6 +1087,7 @@
   }
   document.getElementById("addBtn").onclick = addTask;
   input.addEventListener("keydown", function (e) { if (e.key === "Enter") addTask(); });
+  document.getElementById("settleToggle").onclick = function () { settleMode = (settleMode === "current") ? "projected" : "current"; render(); };
   updateAddVisibility();
   document.querySelectorAll(".tabbar [data-tab]").forEach(function (b) { b.onclick = function () { showTab(b.getAttribute("data-tab")); }; });
 
