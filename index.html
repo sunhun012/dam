@@ -48,6 +48,19 @@
   .stat .s-v.good { color: var(--good); }
   .stat .s-v.bad { color: var(--bad); }
 
+  /* 다가오는 마감 */
+  .deadline-alert { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .deadline-alert .overline { display: block; margin-bottom: 6px; }
+  .dl-item { display: flex; align-items: center; gap: 13px; padding: 10px 0; cursor: pointer; }
+  .dl-item + .dl-item { border-top: 1px solid var(--line); }
+  .dl-item:active { opacity: .6; }
+  .dl-dday { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; min-width: 48px; }
+  .dl-dday.soon { color: var(--bad); }
+  .dl-body { flex: 1; min-width: 0; }
+  .dl-name { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dl-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .dl-date { font-size: 12px; color: var(--muted); flex: 0 0 auto; }
+
   /* 달력 */
   .calendar { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -69,6 +82,13 @@
   .cal-dot { width: 4px; height: 4px; border-radius: 50%; }
   .cal-dot.done { background: var(--ink); }
   .cal-dot.slip { background: var(--bad); }
+  .cal-dot.deadline { width: 6px; height: 6px; background: transparent; border: 1.5px solid var(--ink); box-sizing: border-box; }
+  .cal-day.deadline-day { border-color: var(--ink); border-style: dashed; }
+  .cal-day.deadline-day.selected, .cal-day.deadline-day.today { border-style: solid; }
+  .cal-legend { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .cal-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .cal-legend .cal-dot { width: 5px; height: 5px; }
+  .cal-legend .cal-dot.deadline { width: 7px; height: 7px; }
 
   /* 선택한 날 */
   .dd-head { display: flex; align-items: baseline; gap: 9px; margin: 24px 2px 14px; }
@@ -152,26 +172,6 @@
   .settings .danger { width: 100%; border: none; background: transparent; padding: 15px 16px; font-size: 14px; font-weight: 600; font-family: inherit; text-align: left; cursor: pointer; color: var(--bad); }
   .settings .set-item:active, .settings .danger:active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
 
-  /* 친구 */
-  .friends-sec { margin-bottom: 22px; }
-  .friend-row { display: flex; align-items: center; gap: 12px; padding: 13px 15px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); margin-bottom: 10px; }
-  .friend-av { width: 42px; height: 42px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 500; flex: 0 0 auto; }
-  .friend-info { flex: 1; min-width: 0; }
-  .friend-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .friend-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .friend-right { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
-  .friend-amt { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
-  .friend-amt.pos { color: var(--good); } .friend-amt.neg { color: var(--bad); }
-  .friend-x { border: none; background: transparent; color: var(--faint); cursor: pointer; padding: 4px; border-radius: 8px; line-height: 0; display: inline-flex; }
-  .friend-x:hover { color: var(--bad); }
-  .friend-actions { display: flex; gap: 8px; flex: 0 0 auto; }
-  .friend-actions button { border: 1px solid var(--line); background: transparent; border-radius: 9px; padding: 8px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--text); }
-  .friend-actions .accept { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
-  .invite-btn { width: 100%; border: 1px dashed var(--line); background: transparent; color: var(--text); border-radius: 12px; padding: 13px; font-weight: 600; font-size: 13.5px; cursor: pointer; font-family: inherit; letter-spacing: -0.01em; }
-  .invite-btn:active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
-  .friend-empty { color: var(--muted); font-size: 13px; padding: 4px 2px 14px; letter-spacing: -0.01em; }
-  .friend-guest { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 22px; }
-
   /* 로그인 / 가입 */
   #authWrap { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; max-width: 380px; margin: 0 auto; padding: 40px 24px calc(40px + env(safe-area-inset-bottom)); }
   .auth-brand { text-align: center; margin-bottom: 38px; }
@@ -225,6 +225,7 @@
       </div>
     </div>
 
+    <div id="deadlineAlert"></div>
     <div id="calendar"></div>
     <div id="dayDetail"></div>
 
@@ -328,60 +329,6 @@
   function uid() { return "t" + Math.random().toString(36).slice(2, 9); }
   function doNums(t) { return { goal: Math.max(1, Math.round(n(t.goal, DEF.doGoal))), reward: Math.max(0, n(t.reward, DEF.doReward)), penalty: Math.max(0, n(t.penalty, DEF.doPenalty)) }; }
   function avNums(t) { return { limit: Math.max(0, Math.round(n(t.limit, DEF.avLimit))), penalty: Math.max(0, n(t.penalty, DEF.avPenalty)), reward: Math.max(0, n(t.reward, DEF.avReward)) }; }
-
-  // ---------- 친구 (계정 데이터 직접 접근) ----------
-  function loadDataFor(email) { try { var raw = localStorage.getItem(DATA_PREFIX + "::" + email); if (raw) return JSON.parse(raw) || { tasks: [] }; } catch (e) {} return { tasks: [] }; }
-  function saveDataFor(email, data) { try { localStorage.setItem(DATA_PREFIX + "::" + email, JSON.stringify(data)); } catch (e) {} }
-  function nameFor(email, data) {
-    if (data && data.profile && data.profile.name) return data.profile.name;
-    var acc = loadAccounts()[email];
-    if (acc && acc.name) return acc.name;
-    return email.split("@")[0];
-  }
-  function friendSummary(email) {
-    var d = loadDataFor(email), wt = weeklyTotalsFor(d.tasks);
-    return { email: email, name: nameFor(email, d), settle: wt.settle, done: wt.totalDone, count: (d.tasks || []).length };
-  }
-  function inviteFriend() {
-    var raw = prompt("초대할 친구의 이메일을 입력하세요");
-    if (raw === null) return;
-    var email = raw.trim().toLowerCase();
-    if (!email) return;
-    if (!validEmail(email)) { alert("올바른 이메일 형식이 아닙니다."); return; }
-    if (email === session.email) { alert("본인은 친구로 추가할 수 없습니다."); return; }
-    if (!loadAccounts()[email]) { alert("가입되지 않은 이메일입니다.\n상대가 이 앱에 먼저 가입해야 해요."); return; }
-    if ((state.friends || []).indexOf(email) >= 0) { alert("이미 친구입니다."); return; }
-    var theirData = loadDataFor(email);
-    if (!theirData.friends) theirData.friends = [];
-    if (!theirData.friendRequests) theirData.friendRequests = [];
-    if (theirData.friends.indexOf(session.email) >= 0) { alert("이미 친구입니다."); return; }
-    if (theirData.friendRequests.indexOf(session.email) >= 0) { alert("이미 초대를 보냈습니다.\n상대의 수락을 기다려 주세요."); return; }
-    theirData.friendRequests.push(session.email);
-    saveDataFor(email, theirData);
-    alert("'" + nameFor(email, theirData) + "'님에게 초대를 보냈어요!\n상대가 수락하면 친구가 됩니다.");
-    renderProfile();
-  }
-  function acceptFriend(email) {
-    if (!state.friends) state.friends = [];
-    if (state.friends.indexOf(email) < 0) state.friends.push(email);
-    state.friendRequests = (state.friendRequests || []).filter(function (e) { return e !== email; });
-    var theirData = loadDataFor(email);
-    if (!theirData.friends) theirData.friends = [];
-    if (theirData.friends.indexOf(session.email) < 0) theirData.friends.push(session.email);
-    saveDataFor(email, theirData);
-    save(); renderProfile();
-  }
-  function declineFriend(email) {
-    state.friendRequests = (state.friendRequests || []).filter(function (e) { return e !== email; });
-    save(); renderProfile();
-  }
-  function removeFriend(email, name) {
-    if (!confirm("'" + name + "'님을 친구에서 삭제할까요?")) return;
-    state.friends = (state.friends || []).filter(function (e) { return e !== email; });
-    var theirData = loadDataFor(email);
-    if (theirData.friends) { theirData.friends = theirData.friends.filter(function (e) { return e !== session.email; }); saveDataFor(email, theirData); }
-    save(); renderProfile();
-  }
 
   var state = { tasks: [] };
   var currentType = "do";
@@ -541,8 +488,44 @@
     a.textContent = (wt.settle < 0 ? "−" : "+") + won(wt.settle);
     a.className = "settle-amt " + (wt.settle < 0 ? "neg" : "pos");
 
+    renderDeadlineAlert();
     renderCalendar();
     renderDayDetail();
+  }
+
+  function renderDeadlineAlert() {
+    var host = document.getElementById("deadlineAlert"); host.innerHTML = "";
+    var today = stripTime(new Date());
+    var items = [];
+    state.tasks.forEach(function (t) {
+      if ((t.type || "do") === "avoid" && t.deadline) {
+        var daysLeft = Math.round((parseYmd(t.deadline) - today) / 86400000);
+        if (daysLeft >= 0) items.push({ task: t, daysLeft: daysLeft });
+      }
+    });
+    if (!items.length) return;
+    items.sort(function (a, b) { return a.daysLeft - b.daysLeft; });
+
+    var card = document.createElement("div"); card.className = "deadline-alert";
+    var ov = document.createElement("div"); ov.className = "overline"; ov.textContent = "다가오는 마감"; card.appendChild(ov);
+
+    items.slice(0, 5).forEach(function (it) {
+      var t = it.task, st = avoidStatus(t), dl = parseYmd(t.deadline);
+      var row = document.createElement("div"); row.className = "dl-item";
+      var dd = document.createElement("div"); dd.className = "dl-dday" + (it.daysLeft <= 3 ? " soon" : "");
+      dd.textContent = it.daysLeft === 0 ? "D-DAY" : "D-" + it.daysLeft;
+      var body = document.createElement("div"); body.className = "dl-body";
+      var nm = document.createElement("div"); nm.className = "dl-name"; nm.textContent = t.name;
+      var sub = document.createElement("div"); sub.className = "dl-sub";
+      sub.textContent = st.total === 0 ? "아직 한 번도 안 어김" : "지금까지 " + st.total + "회 어김";
+      body.appendChild(nm); body.appendChild(sub);
+      var date = document.createElement("div"); date.className = "dl-date";
+      date.textContent = (dl.getMonth() + 1) + "/" + dl.getDate();
+      row.appendChild(dd); row.appendChild(body); row.appendChild(date);
+      row.onclick = (function (key, mm, yy) { return function () { selectedDate = key; calCursor = { y: yy, m: mm }; render(); }; })(t.deadline, dl.getMonth(), dl.getFullYear());
+      card.appendChild(row);
+    });
+    host.appendChild(card);
   }
 
   function renderCalendar() {
@@ -568,6 +551,10 @@
 
     var grid = document.createElement("div"); grid.className = "cal-grid";
     var today = stripTime(new Date()), todayKey = ymd(today);
+    var deadlines = {};
+    state.tasks.forEach(function (t) {
+      if ((t.type || "do") === "avoid" && t.deadline) { (deadlines[t.deadline] = deadlines[t.deadline] || []).push(t.name); }
+    });
     var first = new Date(calCursor.y, calCursor.m, 1);
     var startBlank = (first.getDay() + 6) % 7;
     var daysInMonth = new Date(calCursor.y, calCursor.m + 1, 0).getDate();
@@ -581,6 +568,7 @@
       if (key === todayKey) cls += " today";
       if (key === selectedDate) cls += " selected";
       if (d > today) cls += " future";
+      if (deadlines[key]) { cls += " deadline-day"; cell.title = "목표 마감: " + deadlines[key].join(", "); }
       cell.className = cls;
 
       var num = document.createElement("div"); num.className = "d-num"; num.textContent = day;
@@ -591,12 +579,25 @@
       var dc = Math.min(act.done, 3);
       for (var i2 = 0; i2 < dc; i2++) { var dt = document.createElement("span"); dt.className = "cal-dot done"; dots.appendChild(dt); }
       if (act.slip > 0) { var sd = document.createElement("span"); sd.className = "cal-dot slip"; dots.appendChild(sd); }
+      if (deadlines[key]) { var dl = document.createElement("span"); dl.className = "cal-dot deadline"; dots.appendChild(dl); }
       cell.appendChild(dots);
 
       (function (k) { cell.onclick = function () { selectedDate = k; render(); }; })(key);
       grid.appendChild(cell);
     }
     card.appendChild(grid);
+
+    var legend = document.createElement("div"); legend.className = "cal-legend";
+    function legItem(dotCls, label) {
+      var sp = document.createElement("span");
+      var dot = document.createElement("i"); dot.className = "cal-dot " + dotCls;
+      sp.appendChild(dot); sp.appendChild(document.createTextNode(label)); return sp;
+    }
+    legend.appendChild(legItem("done", "완료"));
+    legend.appendChild(legItem("slip", "어김"));
+    if (Object.keys(deadlines).length) legend.appendChild(legItem("deadline", "목표 마감"));
+    card.appendChild(legend);
+
     host.appendChild(card);
   }
 
@@ -827,8 +828,6 @@
     tiles.appendChild(statTile(state.tasks.length + "개", "진행 중 항목"));
     body.appendChild(tiles);
 
-    renderFriends(body);
-
     var settings = document.createElement("div"); settings.className = "settings";
     var accRow = document.createElement("div"); accRow.className = "set-row";
     var accL = document.createElement("span"); accL.textContent = "계정";
@@ -850,74 +849,6 @@
     var nn = document.createElement("div"); nn.className = "t-n"; nn.textContent = num;
     var ll = document.createElement("div"); ll.className = "t-l"; ll.textContent = label;
     t.appendChild(nn); t.appendChild(ll); return t;
-  }
-
-  function renderFriends(body) {
-    var sec = document.createElement("div"); sec.className = "friends-sec";
-
-    if (!(session && session.type === "user")) {
-      sec.appendChild(sectionTitle("친구"));
-      var g = document.createElement("div"); g.className = "friend-guest";
-      g.innerHTML = "친구 기능은 로그인한 계정끼리 사용할 수 있어요.<br />아래 설정에서 로그인 · 가입해 주세요.";
-      sec.appendChild(g); body.appendChild(sec); return;
-    }
-
-    // 받은 초대
-    var reqs = (state.friendRequests || []).filter(function (e) { return (state.friends || []).indexOf(e) < 0; });
-    if (reqs.length) {
-      var rt = sectionTitle("받은 초대 (" + reqs.length + ")"); sec.appendChild(rt);
-      reqs.forEach(function (email) {
-        var s = friendSummary(email);
-        var row = document.createElement("div"); row.className = "friend-row";
-        row.appendChild(avatarEl(s.name));
-        var info = document.createElement("div"); info.className = "friend-info";
-        var nm = document.createElement("div"); nm.className = "friend-name"; nm.textContent = s.name;
-        var sub = document.createElement("div"); sub.className = "friend-sub"; sub.textContent = email;
-        info.appendChild(nm); info.appendChild(sub); row.appendChild(info);
-        var acts = document.createElement("div"); acts.className = "friend-actions";
-        var ok = document.createElement("button"); ok.className = "accept"; ok.textContent = "수락";
-        ok.onclick = (function (e) { return function () { acceptFriend(e); }; })(email);
-        var no = document.createElement("button"); no.textContent = "거절";
-        no.onclick = (function (e) { return function () { declineFriend(e); }; })(email);
-        acts.appendChild(ok); acts.appendChild(no); row.appendChild(acts);
-        sec.appendChild(row);
-      });
-    }
-
-    // 친구 목록
-    sec.appendChild(sectionTitle("친구 " + ((state.friends || []).length ? "(" + state.friends.length + ")" : "")));
-    if (!(state.friends || []).length) {
-      var em = document.createElement("div"); em.className = "friend-empty";
-      em.textContent = "아직 친구가 없어요. 이메일로 초대해 보세요.";
-      sec.appendChild(em);
-    } else {
-      state.friends.forEach(function (email) {
-        var s = friendSummary(email);
-        var row = document.createElement("div"); row.className = "friend-row";
-        row.appendChild(avatarEl(s.name));
-        var info = document.createElement("div"); info.className = "friend-info";
-        var nm = document.createElement("div"); nm.className = "friend-name"; nm.textContent = s.name;
-        var sub = document.createElement("div"); sub.className = "friend-sub"; sub.textContent = "이번 주 완료 " + s.done + "회 · 항목 " + s.count + "개";
-        info.appendChild(nm); info.appendChild(sub); row.appendChild(info);
-        var right = document.createElement("div"); right.className = "friend-right";
-        var neg = s.settle < 0;
-        var amt = document.createElement("div"); amt.className = "friend-amt " + (neg ? "neg" : "pos");
-        amt.textContent = (neg ? "−" : "+") + won(s.settle);
-        var x = document.createElement("button"); x.className = "friend-x"; x.title = "친구 삭제"; x.appendChild(icon("close"));
-        x.onclick = (function (e, nn) { return function () { removeFriend(e, nn); }; })(email, s.name);
-        right.appendChild(amt); right.appendChild(x); row.appendChild(right);
-        sec.appendChild(row);
-      });
-    }
-
-    var invite = document.createElement("button"); invite.className = "invite-btn"; invite.textContent = "+  친구 초대";
-    invite.onclick = inviteFriend;
-    sec.appendChild(invite);
-    body.appendChild(sec);
-  }
-  function avatarEl(name) {
-    var a = document.createElement("div"); a.className = "friend-av";
-    a.textContent = (name || "?").trim().charAt(0) || "?"; return a;
   }
 
   // ---------- 추가 UI ----------
