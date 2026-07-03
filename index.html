@@ -67,7 +67,8 @@
   .calendar { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .cal-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-  .cal-nav { display: flex; gap: 2px; }
+  .cal-nav { display: flex; gap: 2px; align-items: center; position: relative; }
+  .cal-nav .cal-jump-hidden { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; bottom: 0; left: 0; }
   .cal-nav button { border: none; background: transparent; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 8px; line-height: 0; display: inline-flex; }
   .cal-nav button:hover { color: var(--ink); }
   .cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
@@ -183,6 +184,22 @@
   .settings .set-item { width: 100%; border: none; background: transparent; padding: 15px 16px; font-size: 14px; font-weight: 600; font-family: inherit; text-align: left; cursor: pointer; color: var(--text); }
   .settings .danger { width: 100%; border: none; background: transparent; padding: 15px 16px; font-size: 14px; font-weight: 600; font-family: inherit; text-align: left; cursor: pointer; color: var(--bad); }
   .settings .set-item:active, .settings .danger:active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+
+  /* 프로필 편집 모달 */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; width: 100%; max-width: 340px; box-shadow: 0 12px 44px rgba(0,0,0,.28); }
+  .modal h3 { margin: 0 0 18px; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; text-align: center; }
+  .modal-avatar { width: 88px; height: 88px; font-size: 34px; margin: 0 auto 16px; background-size: cover; background-position: center; }
+  .modal-photo-btn { display: block; margin: 0 auto 16px; border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 10px; padding: 9px 16px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .modal-photo-btn:active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .avatar-colors { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 18px; }
+  .color-dot { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; padding: 0; box-shadow: inset 0 0 0 2px var(--card); }
+  .color-dot.sel { border-color: var(--ink); }
+  .modal .field { width: 100%; text-align: left; margin-bottom: 18px; padding: 12px 14px; font-size: 15px; }
+  .modal-btns { display: flex; gap: 8px; }
+  .modal-btns button { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .modal-btns .save { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+  .modal-btns .cancel { background: transparent; color: var(--text); }
 
   /* 로그인 / 가입 */
   #authWrap { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; max-width: 380px; margin: 0 auto; padding: 40px 24px calc(40px + env(safe-area-inset-bottom)); }
@@ -340,7 +357,8 @@
     close: '<svg class="icon" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
     chevL: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
     chevR: '<svg class="icon" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
-    check: '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'
+    check: '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+    search: '<svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-3.8-3.8"/></svg>'
   };
   function icon(name) { var s = document.createElement("span"); s.className = "ic-wrap"; s.innerHTML = ICONS[name]; return s; }
 
@@ -598,6 +616,11 @@
     var title = document.createElement("div"); title.className = "cal-title";
     title.textContent = calCursor.y + "년 " + (calCursor.m + 1) + "월";
     var nav = document.createElement("div"); nav.className = "cal-nav";
+    var jumpInput = document.createElement("input"); jumpInput.type = "date"; jumpInput.className = "cal-jump-hidden";
+    jumpInput.onchange = function () { if (jumpInput.value) { var jd = parseYmd(jumpInput.value); calCursor = { y: jd.getFullYear(), m: jd.getMonth() }; selectedDate = jumpInput.value; render(); } };
+    var jumpBtn = document.createElement("button"); jumpBtn.title = "날짜 검색"; jumpBtn.appendChild(icon("search"));
+    jumpBtn.onclick = function () { jumpInput.value = selectedDate; if (jumpInput.showPicker) { try { jumpInput.showPicker(); } catch (e) { jumpInput.click(); } } else { jumpInput.click(); } };
+    nav.appendChild(jumpInput); nav.appendChild(jumpBtn);
     var todayBtn = document.createElement("button"); todayBtn.textContent = "오늘"; todayBtn.title = "오늘로 이동";
     todayBtn.style.cssText = "font-size:12px;font-weight:600;padding:6px 10px;letter-spacing:-0.01em;";
     todayBtn.onclick = function () { var t = stripTime(new Date()); calCursor = { y: t.getFullYear(), m: t.getMonth() }; selectedDate = ymd(t); render(); };
@@ -956,13 +979,14 @@
     });
 
     var head = document.createElement("div"); head.className = "profile-head";
-    var av = document.createElement("div"); av.className = "avatar"; av.textContent = (profile.name || "나").trim().charAt(0) || "?";
+    var av = document.createElement("div"); av.className = "avatar"; applyAvatar(av, profile);
+    av.style.cursor = "pointer"; av.onclick = openProfileEditor;
     var info = document.createElement("div");
     var nameEl = document.createElement("div"); nameEl.className = "profile-name";
     var nameText = document.createElement("span"); nameText.textContent = profile.name || "나";
     var editText = document.createElement("span"); editText.className = "edit"; editText.textContent = "수정";
     nameEl.appendChild(nameText); nameEl.appendChild(editText);
-    nameEl.onclick = function () { var nn = prompt("닉네임을 입력하세요", profile.name || "나"); if (nn !== null) { profile.name = nn.trim() || "나"; save(); renderProfile(); } };
+    nameEl.onclick = openProfileEditor;
     var subEl = document.createElement("div"); subEl.className = "profile-sub";
     subEl.textContent = (session && session.type === "user") ? session.email : "게스트 모드";
     info.appendChild(nameEl); info.appendChild(subEl);
@@ -999,7 +1023,12 @@
     settings.appendChild(authBtn);
 
     var reset = document.createElement("button"); reset.className = "danger"; reset.textContent = "모든 기록 삭제";
-    reset.onclick = function () { if (confirm("모든 항목과 기록을 삭제할까요?\n되돌릴 수 없습니다.")) { state.tasks = []; state.events = {}; openEditor = null; save(); renderProfile(); render(); } };
+    reset.onclick = function () {
+      if (confirm("모든 항목과 기록을 삭제하고 로그아웃할까요?\n프로필도 초기화되며, 되돌릴 수 없습니다.")) {
+        state.tasks = []; state.events = {}; state.profile = { name: "나" }; openEditor = null;
+        save(); logout();
+      }
+    };
     settings.appendChild(reset); body.appendChild(settings);
   }
   function statTile(num, label) {
@@ -1007,6 +1036,82 @@
     var nn = document.createElement("div"); nn.className = "t-n"; nn.textContent = num;
     var ll = document.createElement("div"); ll.className = "t-l"; ll.textContent = label;
     t.appendChild(nn); t.appendChild(ll); return t;
+  }
+
+  // ---------- 프로필 사진 ----------
+  var AVATAR_COLORS = ["#1a1a1e", "#2f6a4f", "#a63e2c", "#3b5ba5", "#8a5a2b", "#7a4a8a", "#c2882e", "#4a4f57"];
+  function applyAvatar(el, profile) {
+    var a = profile && profile.avatar;
+    if (a && a.type === "photo" && a.data) {
+      el.textContent = "";
+      el.style.backgroundImage = "url(" + a.data + ")";
+      el.style.backgroundColor = "";
+      el.style.color = "";
+    } else {
+      el.style.backgroundImage = "";
+      if (a && a.type === "color" && a.color) { el.style.backgroundColor = a.color; el.style.color = "#fff"; }
+      else { el.style.backgroundColor = ""; el.style.color = ""; }
+      el.textContent = ((profile && profile.name) || "나").trim().charAt(0) || "?";
+    }
+  }
+  function downscaleImage(file, cb) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var size = 200, canvas = document.createElement("canvas"); canvas.width = size; canvas.height = size;
+        var ctx = canvas.getContext("2d");
+        var s = Math.min(img.width, img.height), sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+        try { cb(canvas.toDataURL("image/jpeg", 0.82)); } catch (e) { alert("이미지를 불러오지 못했어요."); }
+      };
+      img.onerror = function () { alert("이미지를 불러오지 못했어요."); };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  function openProfileEditor() {
+    var profile = state.profile || (state.profile = { name: "나" });
+    var draft = { name: profile.name || "나", avatar: profile.avatar ? JSON.parse(JSON.stringify(profile.avatar)) : null };
+
+    var overlay = document.createElement("div"); overlay.className = "modal-overlay";
+    var modal = document.createElement("div"); modal.className = "modal";
+    function closeModal() { if (overlay.parentNode) document.body.removeChild(overlay); }
+
+    var h = document.createElement("h3"); h.textContent = "프로필 편집"; modal.appendChild(h);
+
+    var preview = document.createElement("div"); preview.className = "avatar modal-avatar";
+    function refresh() { applyAvatar(preview, draft); dots.forEach(function (d) { d.el.classList.toggle("sel", draft.avatar && draft.avatar.type === "color" && draft.avatar.color === d.col); }); }
+    modal.appendChild(preview);
+
+    var fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.accept = "image/*"; fileInput.style.display = "none";
+    fileInput.onchange = function () { var f = fileInput.files && fileInput.files[0]; if (!f) return; downscaleImage(f, function (url) { draft.avatar = { type: "photo", data: url }; refresh(); }); };
+    var photoBtn = document.createElement("button"); photoBtn.className = "modal-photo-btn"; photoBtn.textContent = "내 사진 선택";
+    photoBtn.onclick = function () { fileInput.click(); };
+    modal.appendChild(photoBtn); modal.appendChild(fileInput);
+
+    var colorsWrap = document.createElement("div"); colorsWrap.className = "avatar-colors";
+    var dots = [];
+    AVATAR_COLORS.forEach(function (col) {
+      var dot = document.createElement("button"); dot.className = "color-dot"; dot.style.background = col; dot.title = "기본 컬러";
+      dot.onclick = (function (c) { return function () { draft.avatar = { type: "color", color: c }; refresh(); }; })(col);
+      dots.push({ el: dot, col: col }); colorsWrap.appendChild(dot);
+    });
+    modal.appendChild(colorsWrap);
+
+    var nameField = document.createElement("input"); nameField.className = "field"; nameField.type = "text"; nameField.maxLength = 20; nameField.value = draft.name; nameField.placeholder = "닉네임";
+    nameField.oninput = function () { draft.name = nameField.value; applyAvatar(preview, draft); };
+    modal.appendChild(nameField);
+
+    var btns = document.createElement("div"); btns.className = "modal-btns";
+    var cancel = document.createElement("button"); cancel.className = "cancel"; cancel.textContent = "취소"; cancel.onclick = closeModal;
+    var saveB = document.createElement("button"); saveB.className = "save"; saveB.textContent = "저장";
+    saveB.onclick = function () { profile.name = (draft.name || "").trim() || "나"; profile.avatar = draft.avatar || null; save(); closeModal(); renderProfile(); };
+    btns.appendChild(cancel); btns.appendChild(saveB); modal.appendChild(btns);
+
+    overlay.onclick = function (e) { if (e.target === overlay) closeModal(); };
+    overlay.appendChild(modal); document.body.appendChild(overlay);
+    refresh(); nameField.focus();
   }
 
   // ---------- 추가 UI ----------
@@ -1089,7 +1194,13 @@
   input.addEventListener("keydown", function (e) { if (e.key === "Enter") addTask(); });
   document.getElementById("settleToggle").onclick = function () { settleMode = (settleMode === "current") ? "projected" : "current"; render(); };
   updateAddVisibility();
-  document.querySelectorAll(".tabbar [data-tab]").forEach(function (b) { b.onclick = function () { showTab(b.getAttribute("data-tab")); }; });
+  document.querySelectorAll(".tabbar [data-tab]").forEach(function (b) {
+    b.onclick = function () {
+      var tab = b.getAttribute("data-tab");
+      if (tab === "home") { var t = stripTime(new Date()); calCursor = { y: t.getFullYear(), m: t.getMonth() }; selectedDate = ymd(t); }
+      showTab(tab);
+    };
+  });
 
   session = loadSession();
   if (session && (session.type === "user" || session.type === "guest")) enterApp(session);
