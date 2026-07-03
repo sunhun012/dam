@@ -105,10 +105,6 @@
   .ev-check .icon { width: 14px; height: 14px; stroke-width: 2.4; }
   .ev-text { flex: 1; font-size: 14.5px; letter-spacing: -0.01em; word-break: break-word; }
   .ev-text.done { color: var(--muted); text-decoration: line-through; }
-  .ev-empty { color: var(--muted); font-size: 13px; padding: 2px 0 6px; }
-  .ev-add { display: flex; gap: 9px; margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
-  .ev-add .field { flex: 1; text-align: left; padding: 10px 12px; }
-  .ev-add button { border: none; background: var(--ink); color: var(--on-ink); font-weight: 600; border-radius: 9px; padding: 0 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
 
   /* 카드 */
   .task { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); margin-bottom: 12px; }
@@ -256,6 +252,7 @@
       <div class="type-seg" id="typeSeg">
         <button data-type="do" class="active">해야 할 일</button>
         <button data-type="avoid">하지 말 일</button>
+        <button data-type="event">이 날 할 일</button>
       </div>
       <div class="add">
         <input id="taskInput" class="field" type="text" placeholder="예: 헬스장 가기" maxlength="30" />
@@ -277,6 +274,11 @@
       <div class="opts" id="doDateOpts" style="display:none">
         완료 +<input type="number" class="field" id="doDateReward" value="500" min="0" step="100" inputmode="numeric" />원 ·
         미완료 −<input type="number" class="field" id="doDatePenalty" value="10000" min="0" step="1000" inputmode="numeric" />원
+      </div>
+      <div class="deadline-row" id="evDateRow" style="display:none">
+        <label>언제</label>
+        <input type="date" class="field" id="evDateInput" />
+        <span style="color:var(--faint)">그날 할 일로 달력에 표시</span>
       </div>
       <div class="deadline-row" id="deadlineRow" style="display:none">
         <label>언제까지</label>
@@ -686,30 +688,20 @@
   function renderEvents(host) {
     var key = selectedDate;
     var list = (state.events && state.events[key]) || [];
+    if (!list.length) return;
     host.appendChild(sectionTitle("이 날 할 일"));
     var card = document.createElement("div"); card.className = "task";
-    if (list.length) {
-      list.forEach(function (ev) {
-        var row = document.createElement("div"); row.className = "ev-row";
-        var chk = document.createElement("button"); chk.className = "ev-check" + (ev.done ? " on" : ""); chk.title = "완료";
-        if (ev.done) chk.appendChild(icon("check"));
-        chk.onclick = (function (e) { return function () { e.done = !e.done; save(); render(); }; })(ev);
-        var tx = document.createElement("div"); tx.className = "ev-text" + (ev.done ? " done" : ""); tx.textContent = ev.text;
-        var del = document.createElement("button"); del.className = "icon-btn del"; del.title = "삭제"; del.appendChild(icon("close"));
-        del.onclick = (function (id) { return function () { removeEvent(key, id); }; })(ev.id);
-        row.appendChild(chk); row.appendChild(tx); row.appendChild(del);
-        card.appendChild(row);
-      });
-    } else {
-      var e = document.createElement("div"); e.className = "ev-empty"; e.textContent = "아직 없어요. 아래에 적어보세요."; card.appendChild(e);
-    }
-    var ir = document.createElement("div"); ir.className = "ev-add";
-    var inp = document.createElement("input"); inp.className = "field"; inp.type = "text"; inp.placeholder = "예: 오후 3시 미팅"; inp.maxLength = 40;
-    var btn = document.createElement("button"); btn.textContent = "추가";
-    function add() { var v = inp.value.trim(); if (!v) { inp.focus(); return; } addEvent(key, v); }
-    btn.onclick = add;
-    inp.addEventListener("keydown", function (ev) { if (ev.key === "Enter") add(); });
-    ir.appendChild(inp); ir.appendChild(btn); card.appendChild(ir);
+    list.forEach(function (ev) {
+      var row = document.createElement("div"); row.className = "ev-row";
+      var chk = document.createElement("button"); chk.className = "ev-check" + (ev.done ? " on" : ""); chk.title = "완료";
+      if (ev.done) chk.appendChild(icon("check"));
+      chk.onclick = (function (e) { return function () { e.done = !e.done; save(); render(); }; })(ev);
+      var tx = document.createElement("div"); tx.className = "ev-text" + (ev.done ? " done" : ""); tx.textContent = ev.text;
+      var del = document.createElement("button"); del.className = "icon-btn del"; del.title = "삭제"; del.appendChild(icon("close"));
+      del.onclick = (function (id) { return function () { removeEvent(key, id); }; })(ev.id);
+      row.appendChild(chk); row.appendChild(tx); row.appendChild(del);
+      card.appendChild(row);
+    });
     host.appendChild(card);
   }
   function addEvent(key, text) {
@@ -998,17 +990,21 @@
   var doOpts = document.getElementById("doOpts");
   var doDateRow = document.getElementById("doDateRow");
   var doDateOpts = document.getElementById("doDateOpts");
+  var evDateRow = document.getElementById("evDateRow");
   var avOpts = document.getElementById("avOpts");
   function updateAddVisibility() {
+    var isDo = currentType === "do";
     var avoid = currentType === "avoid";
-    var dateMode = !avoid && currentDoMode === "date";
-    doModeSeg.style.display = avoid ? "none" : "flex";
-    doOpts.style.display = (!avoid && currentDoMode === "week") ? "block" : "none";
+    var isEvent = currentType === "event";
+    var dateMode = isDo && currentDoMode === "date";
+    doModeSeg.style.display = isDo ? "flex" : "none";
+    doOpts.style.display = (isDo && currentDoMode === "week") ? "block" : "none";
     doDateRow.style.display = dateMode ? "flex" : "none";
     doDateOpts.style.display = dateMode ? "block" : "none";
     deadlineRow.style.display = avoid ? "flex" : "none";
     avOpts.style.display = avoid ? "block" : "none";
-    input.placeholder = avoid ? "예: 야식 먹기" : (dateMode ? "예: 건강검진 받기" : "예: 헬스장 가기");
+    evDateRow.style.display = isEvent ? "flex" : "none";
+    input.placeholder = avoid ? "예: 야식 먹기" : isEvent ? "예: 오후 3시 미팅" : (dateMode ? "예: 건강검진 받기" : "예: 헬스장 가기");
   }
   typeSeg.querySelectorAll("button").forEach(function (b) {
     b.onclick = function () {
@@ -1029,6 +1025,15 @@
   function addTask() {
     var v = input.value.trim();
     if (!v) { input.focus(); return; }
+    if (currentType === "event") {
+      var ed = document.getElementById("evDateInput").value;
+      if (!ed) { alert("날짜를 선택하세요."); return; }
+      input.value = ""; document.getElementById("evDateInput").value = "";
+      selectedDate = ed; var pd = parseYmd(ed); calCursor = { y: pd.getFullYear(), m: pd.getMonth() };
+      addEvent(ed, v);
+      showTab("home");
+      return;
+    }
     var today = ymd(stripTime(new Date()));
     var task = { id: uid(), name: v, type: currentType, created: today };
     if (currentType === "avoid") {
