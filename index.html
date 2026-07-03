@@ -246,7 +246,7 @@
   <div id="screen-add" class="screen" style="display:none">
     <header>
       <h1>새 항목</h1>
-      <p class="sub">해야 할 일인지, 하지 말 일인지 선택하세요.</p>
+      <p class="sub">무엇을 추가할지 고르세요.</p>
     </header>
     <div class="add-box">
       <div class="type-seg" id="typeSeg">
@@ -584,6 +584,10 @@
     var title = document.createElement("div"); title.className = "cal-title";
     title.textContent = calCursor.y + "년 " + (calCursor.m + 1) + "월";
     var nav = document.createElement("div"); nav.className = "cal-nav";
+    var todayBtn = document.createElement("button"); todayBtn.textContent = "오늘"; todayBtn.title = "오늘로 이동";
+    todayBtn.style.cssText = "font-size:12px;font-weight:600;padding:6px 10px;letter-spacing:-0.01em;";
+    todayBtn.onclick = function () { var t = stripTime(new Date()); calCursor = { y: t.getFullYear(), m: t.getMonth() }; selectedDate = ymd(t); render(); };
+    nav.appendChild(todayBtn);
     var prev = document.createElement("button"); prev.title = "이전 달"; prev.appendChild(icon("chevL"));
     prev.onclick = function () { calCursor.m--; if (calCursor.m < 0) { calCursor.m = 11; calCursor.y--; } renderCalendar(); };
     var next = document.createElement("button"); next.title = "다음 달"; next.appendChild(icon("chevR"));
@@ -601,7 +605,7 @@
     var deadlines = {};
     state.tasks.forEach(function (t) {
       if ((t.type || "do") === "avoid" && t.deadline) { (deadlines[t.deadline] = deadlines[t.deadline] || []).push(t.name); }
-      else if (isDateDo(t) && t.due) { (deadlines[t.due] = deadlines[t.due] || []).push(t.name); }
+      else if (isDateDo(t) && t.due && !t.done) { (deadlines[t.due] = deadlines[t.due] || []).push(t.name); }
     });
     var first = new Date(calCursor.y, calCursor.m, 1);
     var startBlank = (first.getDay() + 6) % 7;
@@ -666,14 +670,23 @@
     renderEvents(host);
 
     if (state.tasks.length === 0) {
-      var empty = document.createElement("div"); empty.className = "empty";
-      empty.innerHTML = "아직 항목이 없습니다.<br />아래 + 버튼으로 추가하세요.";
-      host.appendChild(empty);
+      var hasEv = state.events && state.events[selectedDate] && state.events[selectedDate].length;
+      if (!hasEv) {
+        var empty = document.createElement("div"); empty.className = "empty";
+        empty.innerHTML = "아직 기록이 없어요.<br />아래 + 버튼으로 추가하세요.";
+        host.appendChild(empty);
+      }
       return;
     }
 
     var doTasks = [], avoidTasks = [];
     state.tasks.forEach(function (t) { if ((t.type || "do") === "avoid") avoidTasks.push(t); else doTasks.push(t); });
+    doTasks.sort(function (a, b) {
+      var ad = isDateDo(a), bd = isDateDo(b);
+      if (ad !== bd) return ad ? 1 : -1;
+      if (ad && bd) return a.due < b.due ? -1 : (a.due > b.due ? 1 : 0);
+      return 0;
+    });
 
     if (doTasks.length) {
       host.appendChild(sectionTitle("해야 할 일"));
@@ -1060,6 +1073,7 @@
   }
   document.getElementById("addBtn").onclick = addTask;
   input.addEventListener("keydown", function (e) { if (e.key === "Enter") addTask(); });
+  updateAddVisibility();
   document.querySelectorAll(".tabbar [data-tab]").forEach(function (b) { b.onclick = function () { showTab(b.getAttribute("data-tab")); }; });
 
   session = loadSession();
