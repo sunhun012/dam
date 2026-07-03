@@ -83,6 +83,7 @@
   .cal-dot.done { background: var(--ink); }
   .cal-dot.slip { background: var(--bad); }
   .cal-dot.deadline { width: 6px; height: 6px; background: transparent; border: 1.5px solid var(--ink); box-sizing: border-box; }
+  .cal-dot.event { background: var(--muted); }
   .cal-day.deadline-day { border-color: var(--ink); border-style: dashed; }
   .cal-day.deadline-day.selected, .cal-day.deadline-day.today { border-style: solid; }
   .cal-legend { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
@@ -95,6 +96,19 @@
   .dd-date { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
   .dd-today { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.03em; border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px; }
   .section-title { font-size: 11px; font-weight: 600; color: var(--muted); margin: 22px 2px 12px; letter-spacing: 0.09em; text-transform: uppercase; }
+
+  /* 이 날 할 일 (일정) */
+  .ev-row { display: flex; align-items: center; gap: 11px; padding: 9px 0; }
+  .ev-row + .ev-row { border-top: 1px solid var(--line); }
+  .ev-check { flex: 0 0 auto; width: 22px; height: 22px; border: 1.5px solid var(--line); border-radius: 7px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--on-ink); }
+  .ev-check.on { background: var(--ink); border-color: var(--ink); }
+  .ev-check .icon { width: 14px; height: 14px; stroke-width: 2.4; }
+  .ev-text { flex: 1; font-size: 14.5px; letter-spacing: -0.01em; word-break: break-word; }
+  .ev-text.done { color: var(--muted); text-decoration: line-through; }
+  .ev-empty { color: var(--muted); font-size: 13px; padding: 2px 0 6px; }
+  .ev-add { display: flex; gap: 9px; margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .ev-add .field { flex: 1; text-align: left; padding: 10px 12px; }
+  .ev-add button { border: none; background: var(--ink); color: var(--on-ink); font-weight: 600; border-radius: 9px; padding: 0 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
 
   /* 카드 */
   .task { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); margin-bottom: 12px; }
@@ -318,7 +332,8 @@
     settings: '<svg class="icon" viewBox="0 0 24 24"><circle cx="8" cy="8" r="2.1"/><path d="M11 8h9"/><path d="M4 8h1"/><circle cx="16" cy="16" r="2.1"/><path d="M4 16h9"/><path d="M19 16h1"/></svg>',
     close: '<svg class="icon" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
     chevL: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
-    chevR: '<svg class="icon" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>'
+    chevR: '<svg class="icon" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
+    check: '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'
   };
   function icon(name) { var s = document.createElement("span"); s.className = "ic-wrap"; s.innerHTML = ICONS[name]; return s; }
 
@@ -611,6 +626,7 @@
       for (var i2 = 0; i2 < dc; i2++) { var dt = document.createElement("span"); dt.className = "cal-dot done"; dots.appendChild(dt); }
       if (act.slip > 0) { var sd = document.createElement("span"); sd.className = "cal-dot slip"; dots.appendChild(sd); }
       if (deadlines[key]) { var dl = document.createElement("span"); dl.className = "cal-dot deadline"; dots.appendChild(dl); }
+      if (state.events && state.events[key] && state.events[key].length) { var ev = document.createElement("span"); ev.className = "cal-dot event"; dots.appendChild(ev); }
       cell.appendChild(dots);
 
       (function (k) { cell.onclick = function () { selectedDate = k; render(); }; })(key);
@@ -627,6 +643,7 @@
     legend.appendChild(legItem("done", "완료"));
     legend.appendChild(legItem("slip", "어김"));
     if (Object.keys(deadlines).length) legend.appendChild(legItem("deadline", "목표 마감"));
+    if (state.events && Object.keys(state.events).some(function (k) { return state.events[k].length; })) legend.appendChild(legItem("event", "이 날 할 일"));
     card.appendChild(legend);
 
     host.appendChild(card);
@@ -643,6 +660,8 @@
     head.appendChild(dt);
     if (selectedDate === todayKey) { var tag = document.createElement("span"); tag.className = "dd-today"; tag.textContent = "오늘"; head.appendChild(tag); }
     host.appendChild(head);
+
+    renderEvents(host);
 
     if (state.tasks.length === 0) {
       var empty = document.createElement("div"); empty.className = "empty";
@@ -661,6 +680,49 @@
     if (avoidTasks.length) {
       host.appendChild(sectionTitle("하지 말 일"));
       avoidTasks.forEach(function (task) { host.appendChild(renderAvoidCard(task)); });
+    }
+  }
+
+  function renderEvents(host) {
+    var key = selectedDate;
+    var list = (state.events && state.events[key]) || [];
+    host.appendChild(sectionTitle("이 날 할 일"));
+    var card = document.createElement("div"); card.className = "task";
+    if (list.length) {
+      list.forEach(function (ev) {
+        var row = document.createElement("div"); row.className = "ev-row";
+        var chk = document.createElement("button"); chk.className = "ev-check" + (ev.done ? " on" : ""); chk.title = "완료";
+        if (ev.done) chk.appendChild(icon("check"));
+        chk.onclick = (function (e) { return function () { e.done = !e.done; save(); render(); }; })(ev);
+        var tx = document.createElement("div"); tx.className = "ev-text" + (ev.done ? " done" : ""); tx.textContent = ev.text;
+        var del = document.createElement("button"); del.className = "icon-btn del"; del.title = "삭제"; del.appendChild(icon("close"));
+        del.onclick = (function (id) { return function () { removeEvent(key, id); }; })(ev.id);
+        row.appendChild(chk); row.appendChild(tx); row.appendChild(del);
+        card.appendChild(row);
+      });
+    } else {
+      var e = document.createElement("div"); e.className = "ev-empty"; e.textContent = "아직 없어요. 아래에 적어보세요."; card.appendChild(e);
+    }
+    var ir = document.createElement("div"); ir.className = "ev-add";
+    var inp = document.createElement("input"); inp.className = "field"; inp.type = "text"; inp.placeholder = "예: 오후 3시 미팅"; inp.maxLength = 40;
+    var btn = document.createElement("button"); btn.textContent = "추가";
+    function add() { var v = inp.value.trim(); if (!v) { inp.focus(); return; } addEvent(key, v); }
+    btn.onclick = add;
+    inp.addEventListener("keydown", function (ev) { if (ev.key === "Enter") add(); });
+    ir.appendChild(inp); ir.appendChild(btn); card.appendChild(ir);
+    host.appendChild(card);
+  }
+  function addEvent(key, text) {
+    if (!state.events) state.events = {};
+    if (!state.events[key]) state.events[key] = [];
+    state.events[key].push({ id: uid(), text: text, done: false });
+    save(); render();
+  }
+  function removeEvent(key, id) {
+    if (state.events && state.events[key]) {
+      state.events[key] = state.events[key].filter(function (e) { return e.id !== id; });
+      if (!state.events[key].length) delete state.events[key];
+      save(); render();
     }
   }
 
@@ -918,7 +980,7 @@
     settings.appendChild(authBtn);
 
     var reset = document.createElement("button"); reset.className = "danger"; reset.textContent = "모든 기록 삭제";
-    reset.onclick = function () { if (confirm("모든 항목과 기록을 삭제할까요?\n되돌릴 수 없습니다.")) { state.tasks = []; openEditor = null; save(); renderProfile(); render(); } };
+    reset.onclick = function () { if (confirm("모든 항목과 기록을 삭제할까요?\n되돌릴 수 없습니다.")) { state.tasks = []; state.events = {}; openEditor = null; save(); renderProfile(); render(); } };
     settings.appendChild(reset); body.appendChild(settings);
   }
   function statTile(num, label) {
