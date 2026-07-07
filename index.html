@@ -3,18 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#f3f6fb" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#12151b" media="(prefers-color-scheme: dark)" />
 <title>다짐</title>
 <style>
   :root {
-    --bg: #f6f5f2; --card: #ffffff; --ink: #1a1a1e; --on-ink: #ffffff; --text: #1a1a1e;
-    --muted: #93918b; --faint: #b9b6ae; --line: #e7e4dd;
-    --good: #2f6a4f; --bad: #a63e2c; --good-bg: #eef3ef; --bad-bg: #f6ece8; --shadow: 0 1px 2px rgba(20,20,20,.03);
+    --bg: #f3f6fb; --card: #ffffff; --ink: #3b4757; --on-ink: #ffffff; --text: #333f4d;
+    --muted: #8a94a3; --faint: #b3bcca; --line: #e5eaf2;
+    --accent: #4a90e2; --accent-soft: #eaf2fc;
+    --good: #2f8f6b; --bad: #d1573f; --good-bg: #eaf4ef; --bad-bg: #f9ede9; --shadow: 0 1px 3px rgba(50,70,100,.05);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #121211; --card: #1a1a18; --ink: #efece4; --on-ink: #16150f; --text: #ece9e1;
-      --muted: #8b8981; --faint: #63615a; --line: #2c2b27;
-      --good: #82b49a; --bad: #d18b78; --good-bg: #18251f; --bad-bg: #281a15; --shadow: none;
+      --bg: #12151b; --card: #1a1e26; --ink: #ccd6e4; --on-ink: #141821; --text: #d4dbe6;
+      --muted: #828d9c; --faint: #58616f; --line: #29303b;
+      --accent: #5b9be8; --accent-soft: #1c2836;
+      --good: #6fc39a; --bad: #e08a72; --good-bg: #172620; --bad-bg: #281a15; --shadow: none;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -30,6 +34,7 @@
 
   header { padding: 32px 2px 6px; }
   h1 { font-size: 21px; font-weight: 600; margin: 0; letter-spacing: -0.02em; }
+  #screen-home header h1, .auth-brand h1 { display: inline-block; border-bottom: 3px solid var(--accent); border-radius: 2px; padding-bottom: 2px; }
   .sub { color: var(--muted); font-size: 13px; margin: 5px 0 0; letter-spacing: -0.01em; }
   .overline { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 
@@ -78,12 +83,12 @@
   .cal-day.blank { cursor: default; }
   .cal-day .d-num { font-size: 13px; font-weight: 500; }
   .cal-day.future .d-num { color: var(--faint); }
-  .cal-day.today { border-color: var(--ink); }
+  .cal-day.today { border-color: var(--accent); }
   .cal-day.selected { background: color-mix(in srgb, var(--ink) 9%, transparent); border-color: var(--ink); }
   .cal-day:not(.blank):not(.selected):active { transform: scale(0.94); }
   .cal-dots { display: flex; gap: 3px; height: 5px; align-items: center; }
   .cal-dot { width: 4px; height: 4px; border-radius: 50%; }
-  .cal-dot.done { background: var(--ink); }
+  .cal-dot.done { background: var(--accent); }
   .cal-dot.slip { background: var(--bad); }
   .cal-dot.deadline { width: 6px; height: 6px; background: transparent; border: 1.5px solid var(--ink); box-sizing: border-box; }
   .cal-dot.event { background: var(--muted); }
@@ -104,7 +109,7 @@
   .ev-row { display: flex; align-items: center; gap: 11px; padding: 9px 0; }
   .ev-row + .ev-row { border-top: 1px solid var(--line); }
   .ev-check { flex: 0 0 auto; width: 22px; height: 22px; border: 1.5px solid var(--line); border-radius: 7px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--on-ink); }
-  .ev-check.on { background: var(--ink); border-color: var(--ink); }
+  .ev-check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .ev-check .icon { width: 14px; height: 14px; stroke-width: 2.4; }
   .ev-text { flex: 1; font-size: 14.5px; letter-spacing: -0.01em; word-break: break-word; }
   .ev-text.done { color: var(--muted); text-decoration: line-through; }
@@ -122,7 +127,7 @@
   .icon-btn.del:hover { color: var(--bad); }
 
   .progress { height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 15px; }
-  .progress > span { display: block; height: 100%; background: var(--ink); border-radius: 999px; transition: width .3s ease; }
+  .progress > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .3s ease; }
   .progress.done > span { background: var(--good); }
 
   .status-line { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; letter-spacing: -0.01em; }
@@ -130,7 +135,7 @@
   .rule-line { font-size: 11.5px; color: var(--muted); margin-top: 15px; }
 
   .day-toggle { width: 100%; border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 11px; padding: 12px; font-weight: 600; font-size: 13.5px; cursor: pointer; font-family: inherit; letter-spacing: -0.01em; transition: background .15s ease, border-color .15s ease; }
-  .day-toggle.on { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+  .day-toggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .day-toggle:disabled { opacity: .4; cursor: not-allowed; }
   .day-toggle:not(:disabled):active { transform: scale(0.99); }
   .sel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -1039,7 +1044,7 @@
   }
 
   // ---------- 프로필 사진 ----------
-  var AVATAR_COLORS = ["#1a1a1e", "#2f6a4f", "#a63e2c", "#3b5ba5", "#8a5a2b", "#7a4a8a", "#c2882e", "#4a4f57"];
+  var AVATAR_COLORS = ["#3b4757", "#4a90e2", "#2f8f6b", "#d1573f", "#7a5cc0", "#e0983a", "#3aa0a0", "#8a6d5a"];
   function applyAvatar(el, profile) {
     var a = profile && profile.avatar;
     if (a && a.type === "photo" && a.data) {
