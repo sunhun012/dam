@@ -46,8 +46,8 @@
   #splash { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: flex; align-items: center; justify-content: center;
     transition: opacity .55s ease; }
   #splash.hide { opacity: 0; pointer-events: none; }
-  .splash-logo { height: 86px; width: auto; animation: splashIn .6s cubic-bezier(.2,.7,.2,1) both; }
-  @keyframes splashIn { from { opacity: 0; transform: translateY(10px) scale(.94); } to { opacity: 1; transform: none; } }
+  .splash-logo { height: 86px; width: auto; animation: splashIn 1s cubic-bezier(.22,.61,.36,1) both; }
+  @keyframes splashIn { 0% { opacity: 0; transform: translateY(8px) scale(.9); } 65% { opacity: 1; } 100% { opacity: 1; transform: translateY(0) scale(1); } }
   #authWrap, .wrap { animation: appIn .5s ease both; }
   @keyframes appIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) {
@@ -1246,7 +1246,7 @@
     setTimeout(function () {
       splash.classList.add("hide");
       setTimeout(function () { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 600);
-    }, 700);
+    }, 1500);
   })();
 })();
 </script>
