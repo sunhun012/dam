@@ -59,6 +59,9 @@
   h1 { font-size: 21px; font-weight: 600; margin: 0; letter-spacing: -0.02em; }
   .auth-brand h1 { display: inline-block; border-bottom: 3px solid var(--accent); border-radius: 2px; padding-bottom: 2px; }
   .brand-logo { height: 50px; width: auto; display: block; margin-left: -2px; }
+  @media (prefers-color-scheme: dark) {
+    .brand-logo, .splash-logo { background: #edf2fb; border-radius: 16px; padding: 7px 13px; box-sizing: content-box; }
+  }
   .sub { color: var(--muted); font-size: 13px; margin: 5px 0 0; letter-spacing: -0.01em; }
   .overline { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 
