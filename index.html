@@ -46,7 +46,7 @@
   #splash { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: flex; align-items: center; justify-content: center;
     transition: opacity .55s ease; }
   #splash.hide { opacity: 0; pointer-events: none; }
-  .splash-logo { height: 86px; width: auto; animation: splashIn 1s cubic-bezier(.22,.61,.36,1) both; }
+  .splash-logo { height: 128px; width: auto; max-width: 62vw; animation: splashIn 1s cubic-bezier(.22,.61,.36,1) both; }
   @keyframes splashIn { 0% { opacity: 0; transform: translateY(8px) scale(.9); } 65% { opacity: 1; } 100% { opacity: 1; transform: translateY(0) scale(1); } }
   #authWrap, .wrap { animation: appIn .5s ease both; }
   @keyframes appIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
